@@ -7,6 +7,7 @@ import csv
 import json
 import logging
 import subprocess
+import sys
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -29,7 +30,7 @@ COLORS = {"blue": (255, 100, 20), "pink": (170, 100, 255)}
 
 
 def camera_source(settings: Settings) -> int | str:
-    """Resolve the preferred webcam name on Linux, then use an index."""
+    """Select the named camera or an explicit source."""
     if settings.camera_source is not None:
         if (
             isinstance(settings.camera_source, str)
@@ -37,6 +38,8 @@ def camera_source(settings: Settings) -> int | str:
         ):
             return int(settings.camera_source)
         return settings.camera_source
+    if sys.platform == "win32":
+        return named_camera_index(windows_cameras(), settings.camera_name)
     devices = Path("/dev/v4l/by-id")
     if devices.exists():
         for device in sorted(devices.iterdir()):
@@ -48,8 +51,37 @@ def camera_source(settings: Settings) -> int | str:
     return 0
 
 
+def named_camera_index(devices: list[str], preferred: str) -> int:
+    """Match the configured camera without falling back to another device."""
+    wanted = preferred.casefold()
+    for index, name in enumerate(devices):
+        if wanted in name.casefold():
+            return index
+    if "c270" in wanted:
+        for index, name in enumerate(devices):
+            if "c270" in name.casefold():
+                return index
+    names = ", ".join(f"{index}: {name}" for index, name in enumerate(devices))
+    raise RuntimeError(
+        f"Camera {preferred!r} was not found. "
+        f"Windows cameras: {names or 'none'}. "
+        "Check the USB connection or set camera_source in config.yaml."
+    )
+
+
+def windows_cameras() -> list[str]:
+    """List Windows cameras in DirectShow index order."""
+    from pygrabber.dshow_graph import FilterGraph  # pyrefly: ignore[missing-import]
+
+    return FilterGraph().get_input_devices()
+
+
 def available_cameras() -> str:
     """Describe devices when the default camera cannot open."""
+    if sys.platform == "win32":
+        return "\n".join(
+            f"{index}: {name}" for index, name in enumerate(windows_cameras())
+        ) or "No Windows cameras were found"
     try:
         result = subprocess.run(
             ["v4l2-ctl", "--list-devices"],
@@ -379,7 +411,11 @@ class Application:
         source = (
             str(self.video) if self.video is not None else camera_source(self.settings)
         )
-        camera = cv2.VideoCapture(source)
+        camera = (
+            cv2.VideoCapture(source, cv2.CAP_DSHOW)
+            if sys.platform == "win32" and isinstance(source, int) and self.video is None
+            else cv2.VideoCapture(source)
+        )
         if not camera.isOpened():
             if self.video is not None:
                 raise RuntimeError(f"Could not open video {source!r}")

@@ -8,7 +8,16 @@ The camera feed and event videos stay on your computer. Pushover receives a snap
 
 You need Python 3.13+, [uv](https://docs.astral.sh/uv/), a camera, and [Pushover](https://pushover.net/api) credentials.
 
-From the project directory:
+From the project directory in PowerShell on Windows:
+
+```powershell
+uv sync
+$env:PUSHOVER_TOKEN = 'your-application-token'
+$env:PUSHOVER_USER = 'your-user-key'
+uv run python -m puppy_pad_alarm.app
+```
+
+On Linux:
 
 ```sh
 uv sync
@@ -17,7 +26,7 @@ export PUSHOVER_USER='your-user-key'
 uv run python -m puppy_pad_alarm.app
 ```
 
-The first run downloads the YOLO dog detector model. If the app opens the wrong camera, use `--camera 1` or a device path such as `--camera /dev/video2`.
+The first run downloads the YOLO dog detector model. On Windows, the app selects the Logitech C270 by name and reports the available camera names if it cannot find it. You can set `camera_source: 1` in `config.yaml` to select a camera index manually. On Linux, you can also use `--camera /dev/video2`.
 
 ## Use the preview
 
@@ -60,3 +69,4 @@ Use `--expected pink` for a pink-pad event or `--expected none` for a clip with 
 - No phone alert: Check that `PUSHOVER_TOKEN` and `PUSHOVER_USER` are set in the terminal that starts the app. The preview and `alarm_data/events.log` show delivery errors.
 - No detection or too many alerts: Check the saved snapshot and event video. The default image thresholds are starting values and may need adjustment for your camera and lighting.
 - Restart appears to lose setup: Start the app from the project directory so it uses the same `config.yaml` and `alarm_data/` paths.
+- C270 is not found on Windows: Check that Windows lists and enables the webcam. The startup error shows the DirectShow camera names and indices found by the app.
