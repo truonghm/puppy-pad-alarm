@@ -155,11 +155,6 @@ class Application:
                     if isinstance(saved, dict)
                     else time.time()
                 )
-                pad_state.last_reminder_index = (
-                    int(saved.get("last_reminder_index", -1))
-                    if isinstance(saved, dict)
-                    else -1
-                )
                 pad_state.snapshot_name = (
                     saved.get("snapshot_name") if isinstance(saved, dict) else None
                 )
@@ -176,7 +171,6 @@ class Application:
                     color: {
                         "phase": state.phase.value,
                         "detected_at": state.detected_at,
-                        "last_reminder_index": state.last_reminder_index,
                         "snapshot_name": state.snapshot_name,
                         "object_center": state.object_center,
                     }
@@ -189,27 +183,6 @@ class Application:
     def _state_names(self) -> dict[str, str]:
         """Describe both pad states for event video metadata."""
         return {color: state.phase.value for color, state in self.states.items()}
-
-    def _process_reminders(self, now: float) -> None:
-        """Queue one due reminder per latched pad and persist its slot."""
-        if self.video is not None:
-            return
-        for color, state in self.states.items():
-            index = state.reminder_due(now)
-            if index is None:
-                continue
-            self._save_state()
-            snapshot = (
-                self.output / state.snapshot_name if state.snapshot_name else None
-            )
-            self.logger.info("Pushover reminder %d queued for %s pad", index + 1, color)
-            self.delivery.submit(
-                send_pushover, color, snapshot, reminder=True
-            ).add_done_callback(
-                lambda future, event_color=color: self._delivery_finished(
-                    event_color, future, reminder=True
-                )
-            )
 
     def _dog_near_pad(self, color: str, now: float) -> bool | None:
         """Use a recent pad position to decide if the dog is near it."""
@@ -358,7 +331,6 @@ class Application:
         state.detected_at = time.time()
         state.snapshot_name = saved_snapshot.name if saved_snapshot else None
         state.object_center = candidate.center
-        state.last_reminder_index = -1
         state.last_deterrent_at = state.detected_at
         state.dog_near = self._dog_near_pad(color, time.monotonic()) is True
         self._save_state()
@@ -391,11 +363,9 @@ class Application:
             )
         )
 
-    def _delivery_finished(
-        self, color: str, future: Future[None], *, reminder: bool = False
-    ) -> None:
+    def _delivery_finished(self, color: str, future: Future[None]) -> None:
         """Report the result of the background phone request."""
-        label = "Pushover reminder" if reminder else "Pushover"
+        label = "Pushover"
         error = future.exception()
         if error is None:
             self.notification_status = f"{label} sent: {color} pad"
@@ -425,7 +395,6 @@ class Application:
             frame_number = 0
             fps = camera.get(cv2.CAP_PROP_FPS) or 30.0
             while True:
-                self._process_reminders(time.time())
                 ok, frame = camera.read()
                 if not ok:
                     if self.video is not None:

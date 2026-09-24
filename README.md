@@ -29,7 +29,9 @@ The first run downloads the YOLO dog detector model. If the app opens the wrong 
 
 On first use, press `C`, then press `B` while both pads are visible and clean. You do not need to repeat this on a normal restart.
 
-After a detection, the affected pad stays in an alert state until you clean it and press `B`. Another visit will not send a new detection alert while that state is active. The app sends reminders every minute for 10 minutes, then every 10 minutes for 5 hours. If the dog approaches the pad again, the deterrent sound plays again.
+After a detection, the affected pad stays in an alert state until you clean it and press `B`. Another visit will not send a new detection alert while that state is active. If the dog approaches the pad again, the deterrent sound plays again.
+
+The phone alert uses Pushover emergency priority. Pushover repeats it every minute for up to 5 minutes unless you acknowledge it in the Pushover app. The app does not send separate reminders. Pressing `B` clears the app's alert state, but does not acknowledge an emergency message already sent to Pushover.
 
 ## Saved files
 

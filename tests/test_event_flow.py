@@ -1,4 +1,4 @@
-"""User-visible detection, reminder, and restart behavior."""
+"""User-visible detection and restart behavior."""
 
 from __future__ import annotations
 
@@ -144,23 +144,17 @@ def test_occlusion_resets_partial_detection() -> None:
     )
 
 
-def test_reminders_stop_after_manual_clean() -> None:
-    """A latched pad reminds on schedule until the user marks it clean."""
+def test_manual_clean_rearms_latched_pad() -> None:
+    """The pad stays latched until the user marks it clean."""
     state = PadState(phase=Phase.ALARM_LATCHED, detected_at=1_000.0)
-    assert state.reminder_due(1_059.0) is None
-    assert state.reminder_due(1_060.0) == 0
-    assert state.reminder_due(1_060.0) is None
-    assert state.reminder_due(1_600.0) == 9
-    assert state.reminder_due(2_200.0) == 10
-    assert state.reminder_due(19_600.0) == 39
-    assert state.reminder_due(20_201.0) is None
+    assert state.phase == Phase.ALARM_LATCHED
     state.baseline_set()
     assert state.phase == Phase.READY
-    assert state.reminder_due(30_000.0) is None
+    assert state.detected_at is None
 
 
-def test_restart_keeps_unclean_pad_and_reminder_progress(tmp_path: Path) -> None:
-    """Restarting does not clear an alert or repeat an elapsed reminder."""
+def test_restart_keeps_unclean_pad_latched(tmp_path: Path) -> None:
+    """Restarting does not clear an alert."""
     settings_path = tmp_path / "config.yaml"
     save_settings(
         settings_path, Settings(output_dir=str(tmp_path), save_event_video=False)
@@ -173,7 +167,6 @@ def test_restart_keeps_unclean_pad_and_reminder_progress(tmp_path: Path) -> None
                 "blue": {
                     "phase": "ALARM_LATCHED",
                     "detected_at": 1_000.0,
-                    "last_reminder_index": 4,
                 }
             }
         )
@@ -182,6 +175,5 @@ def test_restart_keeps_unclean_pad_and_reminder_progress(tmp_path: Path) -> None
     restarted = Application(settings_path)
     restored = restarted.states["blue"]
     assert restored.phase == Phase.ALARM_LATCHED
-    assert restored.reminder_due(1_300.0) is None
-    assert restored.reminder_due(1_360.0) == 5
+    assert restored.detected_at == 1_000.0
     restarted.delivery.shutdown(wait=True)

@@ -12,10 +12,8 @@ import pygame
 PUSHOVER_URL = "https://api.pushover.net/1/messages.json"
 
 
-def send_pushover(
-    pad_color: str, snapshot: Path | None, *, reminder: bool = False
-) -> None:
-    """Send an event or reminder message with available image evidence.
+def send_pushover(pad_color: str, snapshot: Path | None) -> None:
+    """Send an emergency event message with available image evidence.
 
     Raises:
         RuntimeError: Required credentials are missing or Pushover rejects the message.
@@ -27,11 +25,15 @@ def send_pushover(
         raise RuntimeError(
             "Set PUSHOVER_TOKEN and PUSHOVER_USER to enable phone notifications"
         )
-    message = (
-        f"Possible poop is still on the {pad_color} pad."
-        if reminder
-        else f"Possible poop detected on the {pad_color} pad."
-    )
+    data = {
+        "token": token,
+        "user": user,
+        "title": "Puppy pad check",
+        "message": f"Possible poop detected on the {pad_color} pad.",
+        "priority": "2",
+        "retry": "60",
+        "expire": "300",
+    }
     with ExitStack() as stack:
         files = None
         if snapshot is not None and snapshot.exists():
@@ -39,12 +41,7 @@ def send_pushover(
             files = {"attachment": (snapshot.name, image, "image/jpeg")}
         response = httpx.post(
             PUSHOVER_URL,
-            data={
-                "token": token,
-                "user": user,
-                "title": "Puppy pad reminder" if reminder else "Puppy pad check",
-                "message": message,
-            },
+            data=data,
             files=files,
             timeout=10,
         )

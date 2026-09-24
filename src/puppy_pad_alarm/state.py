@@ -19,9 +19,6 @@ class Phase(StrEnum):
     ALARM_LATCHED = "ALARM_LATCHED"
 
 
-REMINDER_OFFSETS_S = tuple(range(60, 601, 60)) + tuple(range(1200, 18_601, 600))
-
-
 @dataclass
 class PadState:
     """Track one pad independently of its image position."""
@@ -34,7 +31,6 @@ class PadState:
     inspected_frames: int = 0
     visit_confidence: float = 0.0
     detected_at: float | None = None
-    last_reminder_index: int = -1
     snapshot_name: str | None = None
     object_center: tuple[float, float] | None = None
     dog_near: bool = False
@@ -51,30 +47,12 @@ class PadState:
         self.inspected_frames = 0
         self.visit_confidence = 0.0
         self.detected_at = None
-        self.last_reminder_index = -1
         self.snapshot_name = None
         self.object_center = None
         self.dog_near = False
         self.dog_away_since = None
         self.last_deterrent_at = 0.0
         self.reason = ""
-
-    def reminder_due(self, now: float) -> int | None:
-        """Return one due reminder slot and skip older slots after downtime."""
-        if self.phase != Phase.ALARM_LATCHED or self.detected_at is None:
-            return None
-        elapsed = now - self.detected_at
-        if elapsed > REMINDER_OFFSETS_S[-1] + 600:
-            return None
-        due = [
-            index
-            for index, offset in enumerate(REMINDER_OFFSETS_S)
-            if elapsed >= offset
-        ]
-        if not due or due[-1] <= self.last_reminder_index:
-            return None
-        self.last_reminder_index = due[-1]
-        return due[-1]
 
     def update(
         self,
