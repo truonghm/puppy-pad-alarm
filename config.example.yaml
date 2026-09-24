@@ -1,0 +1,39 @@
+camera_name: C270 HD WEBCAM
+camera_source: null
+search_region: null
+output_dir: alarm_data
+model: yolo11n.pt
+inference_interval_s: 0.2
+dog_confidence: 0.35
+border_hsv:
+  blue: [[90, 55, 45], [135, 255, 255]]
+  pink: [[140, 40, 45], [179, 255, 255]]
+min_pad_area: 4000
+max_pad_area_fraction: 0.45
+min_border_pixels: 80
+white_value_min: 170
+white_saturation_max: 80
+min_white_fraction: 0.45
+border_exclusion_px: 9
+min_object_area: 45
+max_object_area: 10000
+min_delta_lab: 19.0
+max_changed_fraction: 0.45
+brown_hsv_low: [5, 45, 20]
+brown_hsv_high: [28, 255, 210]
+min_persistence_frames: 3
+min_persistence_s: 0.5
+stable_distance_px: 25.0
+checking_timeout_s: 8.0
+clear_frames: 3
+dog_proximity_margin_px: 40
+pad_position_max_age_s: 10.0
+deterrent_cooldown_s: 3.0
+dog_away_confirm_s: 1.0
+save_debug_video: false
+save_event_video: true
+event_video_pre_roll_s: 10.0
+event_video_post_roll_s: 20.0
+event_video_fps: 10.0
+event_video_retention_days: 7
+event_video_max_gb: 5.0

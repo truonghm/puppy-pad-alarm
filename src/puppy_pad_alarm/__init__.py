@@ -1,2 +1,1 @@
-def hello() -> str:
-    return "Hello from puppy-pad-alarm!"
+"""Local camera monitor for puppy pads."""
