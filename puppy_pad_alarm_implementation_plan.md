@@ -59,3 +59,8 @@ Keep this outside the alarm path in the first version. Provide a clean interface
 - The app handles a missing camera, lost frames, pad localization failure, and missing baseline without crashing or making a false confirmed claim.
 
 Use separate recorded clips for at least: empty pads, pad movement, a pee visit, a poop visit on each pad, a partially hidden poop, and lighting variation. Label them by observed outcome; measure both missed alarms and false alarms. The goal is a usable local prototype, not a guaranteed medical-grade or breed-independent classifier.
+
+## Notes
+
+- Do not run linting or formatting or type checking during implementation. Leave this to the user.
+- When adding new packages, add it exclusively via `uv add`. Do not modify `pyproject.toml` directly.
