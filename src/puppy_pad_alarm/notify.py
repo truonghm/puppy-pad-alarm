@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import os
+import time
 from contextlib import ExitStack
 from pathlib import Path
 
@@ -34,17 +36,28 @@ def send_pushover(snapshot: Path | None) -> None:
         "retry": "60",
         "expire": "300",
     }
-    with ExitStack() as stack:
-        files = None
-        if snapshot is not None and snapshot.exists():
-            image = stack.enter_context(snapshot.open("rb"))
-            files = {"attachment": (snapshot.name, image, "image/jpeg")}
-        response = httpx.post(
-            PUSHOVER_URL,
-            data=data,
-            files=files,
-            timeout=httpx.Timeout(30.0),
+    def post_once() -> httpx.Response:
+        """Open the optional snapshot separately for each send attempt."""
+        with ExitStack() as stack:
+            files = None
+            if snapshot is not None and snapshot.exists():
+                image = stack.enter_context(snapshot.open("rb"))
+                files = {"attachment": (snapshot.name, image, "image/jpeg")}
+            return httpx.post(
+                PUSHOVER_URL,
+                data=data,
+                files=files,
+                timeout=httpx.Timeout(30.0),
+            )
+
+    try:
+        response = post_once()
+    except (httpx.ConnectError, httpx.ConnectTimeout) as error:
+        logging.getLogger("puppy_pad_alarm").warning(
+            "Pushover connection failed (%s); retrying once in 5 seconds", error
         )
+        time.sleep(5)
+        response = post_once()
     response.raise_for_status()
     result = response.json()
     if result.get("status") != 1:

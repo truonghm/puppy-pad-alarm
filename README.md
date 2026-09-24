@@ -68,7 +68,7 @@ Use `--expected none` for a clip with no poop. Replay writes results under `alar
 
 ## If something is wrong
 
-- No phone alert: Check that `PUSHOVER_TOKEN` and `PUSHOVER_USER` are set in the terminal that starts the app. Events and errors appear in that terminal and in `alarm_data/events.log`. A network handshake timeout can still occur; the app allows up to 30 seconds for the request.
+- No phone alert: Check that `PUSHOVER_TOKEN` and `PUSHOVER_USER` are set in the terminal that starts the app. Events and errors appear in that terminal and in `alarm_data/events.log`. The app retries one failed connection after 5 seconds. If SSL errors continue, check the Windows network, proxy, or antivirus HTTPS inspection.
 - No detection or too many alerts: Check the saved snapshot and event video. Detection accepts dark colors, including black, and can mistake shadows or dark wet patches for poop. Adjust `max_dark_value` and the other image thresholds for your camera and lighting.
 - Restart appears to lose setup: Start the app from the project directory so it uses the same `config.yaml` and `alarm_data/` paths.
 - C270 is not found on Windows: Check that Windows lists and enables the webcam. The startup error shows the DirectShow camera names and indices found by the app.
