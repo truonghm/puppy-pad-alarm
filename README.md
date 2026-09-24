@@ -1,4 +1,4 @@
-# Puppy pad monitor
+# Puppy pad monitor (vibe-coded!!!!)
 
 This local camera app watches two puppy pads after a dog visit. It uses image rules to find a new brown region, sends a Pushover phone notification, and plays the supplied MP3 near the dog. A visual match is only a possible poop detection.
 
