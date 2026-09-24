@@ -553,16 +553,7 @@ class Application:
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.55,
                 (255, 255, 255),
-                3,
-            )
-            cv2.putText(
-                image,
-                line,
-                (12, 25 + index * 24),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.55,
-                (0, 0, 0),
-                1,
+                2,
             )
         return image
 
