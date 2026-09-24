@@ -15,12 +15,11 @@ white_value_min: 170
 white_saturation_max: 80
 min_white_fraction: 0.45
 border_exclusion_px: 9
-min_object_area: 45
-max_object_area: 10000
+min_object_area: 20
+max_object_area: 30000
 min_delta_lab: 19.0
-max_changed_fraction: 0.45
-brown_hsv_low: [5, 45, 20]
-brown_hsv_high: [28, 255, 210]
+max_changed_fraction: 0.65
+max_dark_value: 220
 min_persistence_frames: 3
 min_persistence_s: 0.5
 stable_distance_px: 25.0

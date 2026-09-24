@@ -32,12 +32,11 @@ class Settings:
     white_saturation_max: int = 80
     min_white_fraction: float = 0.45
     border_exclusion_px: int = 9
-    min_object_area: int = 45
-    max_object_area: int = 10000
+    min_object_area: int = 20
+    max_object_area: int = 30000
     min_delta_lab: float = 19.0
-    max_changed_fraction: float = 0.45
-    brown_hsv_low: list[int] = field(default_factory=lambda: [5, 45, 20])
-    brown_hsv_high: list[int] = field(default_factory=lambda: [28, 255, 210])
+    max_changed_fraction: float = 0.65
+    max_dark_value: int = 220
     min_persistence_frames: int = 3
     min_persistence_s: float = 0.5
     stable_distance_px: float = 25.0
@@ -63,6 +62,17 @@ def load_settings(path: Path) -> Settings:
     data = yaml.safe_load(path.read_text()) or {}
     if not isinstance(data, dict):
         raise TypeError(f"Expected a mapping in {path}")
+    old_color_filter = "brown_hsv_low" in data or "brown_hsv_high" in data
+    if old_color_filter:
+        data.pop("brown_hsv_low", None)
+        data.pop("brown_hsv_high", None)
+        for key, old, new in (
+            ("min_object_area", 45, 20),
+            ("max_object_area", 10000, 30000),
+            ("max_changed_fraction", 0.45, 0.65),
+        ):
+            if data.get(key) == old:
+                data[key] = new
     unknown = set(data) - set(Settings.__dataclass_fields__)
     if unknown:
         raise ValueError(f"Unknown settings: {', '.join(sorted(unknown))}")

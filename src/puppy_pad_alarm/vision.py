@@ -33,7 +33,7 @@ class Pad:
 
 @dataclass
 class Candidate:
-    """A new brown region in pad coordinates."""
+    """A new dark region in pad coordinates."""
 
     center: tuple[float, float]
     contour: np.ndarray
@@ -140,7 +140,7 @@ def find_candidates(
     dog_box: tuple[int, int, int, int] | None,
     settings: Settings,
 ) -> tuple[list[Candidate], str | None]:
-    """Find persistent-object proposals using local color and reference change."""
+    """Find new dark-region proposals relative to the clean reference."""
     if baseline.shape != pad.image.shape:
         return [], "Baseline dimensions do not match"
     occluded = dog_mask_on_pad(pad, dog_box)
@@ -158,12 +158,8 @@ def find_candidates(
     if changed_fraction > settings.max_changed_fraction:
         return [], "Pad alignment or lighting is uncertain"
     hsv = cv2.cvtColor(pad.image, cv2.COLOR_BGR2HSV)
-    brown = cv2.inRange(
-        hsv,
-        np.array(settings.brown_hsv_low, np.uint8),
-        np.array(settings.brown_hsv_high, np.uint8),
-    )
-    changed = np.uint8((distance >= settings.min_delta_lab) & (brown > 0)) * 255
+    dark = hsv[:, :, 2] <= settings.max_dark_value
+    changed = np.uint8((distance >= settings.min_delta_lab) & dark) * 255
     changed = np.where(visible > 0, changed, 0).astype(np.uint8)
     changed = cv2.morphologyEx(changed, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     contours, _ = cv2.findContours(changed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)

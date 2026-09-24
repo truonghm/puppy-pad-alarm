@@ -13,7 +13,7 @@ The camera is available to the laptop. Its preferred device name is `C270 HD WEB
 3. When both pads are visible and clean, provide a `Set clean baseline` action. Save a reference image for each pad in pad-relative coordinates, with its border excluded. Persist references across restarts. Never replace a reference automatically while a possible new object is present.
 4. Use an off-the-shelf dog detector to determine whether the dog enters the broad pad area. The detector needs only the `dog` class. Treat overlap between the dog's detected box and the search region as a visit. Do not attempt to infer pooping from posture in this version. Run detection often enough to capture a brief visit; make the inference interval configurable.
 5. During and after a visit, inspect every visible portion of each pad. Once a pad is found, align its current interior with its clean reference before comparing pixels. Mask the dog and any occluded parts. Do not wait for the dog to leave if a new object is already visible beside her. If the dog hides the surface, wait for a clear view and continue checking.
-6. Find regions that are both new relative to the clean baseline and plausibly brown. Require a configurable minimum/maximum area, separation from the colored border, and persistence at a stable position for multiple frames (initial default: at least three frames spanning 0.5 seconds). Compare in a color space suited to brightness changes; reject simple global exposure shifts, shadows, and dark wet patches as well as practical rules allow. These rules are approximate; do not claim that color alone proves an object is poop.
+6. Find dark regions that are new relative to the clean baseline, including black objects. Favor fewer missed detections even if this causes more false alerts. Require a configurable minimum/maximum area, separation from the colored border, and persistence at a stable position for multiple frames (initial default: at least three frames spanning 0.5 seconds). Compare in a color space suited to brightness changes and reject broad exposure shifts. These rules are approximate; a dark region does not prove an object is poop.
 7. Send one emergency-priority Pushover notification for a confirmed event, using `PUSHOVER_TOKEN` and `PUSHOVER_USER` from the environment. Pushover handles retries for up to 5 minutes. Play `assets/freesound_community-hey-42237.mp3` locally to deter the dog and show which pad triggered it. Save a timestamped image with the detected region outlined and write the event to a local log. Keep the event latched across visits and restarts until the user cleans the pad and manually sets a new clean baseline. The application does not infer whether cleanup happened. A dog approach near the latched pad plays the local deterrent again, once per approach. If credentials or network access are unavailable, keep the event latched and show and log the delivery failure.
 8. If pad tracking, dog detection, or image alignment is uncertain, show the reason in the preview and log it. Do not announce a confirmed poop when the pad is hidden or the image is inconclusive. Recover automatically when a usable view returns.
 
@@ -46,17 +46,17 @@ Keep this outside the alarm path in the first version. Provide a clean interface
 1. Camera selection, preview, search-region calibration, and pad localization/identity.
 2. Clean-baseline capture and pad-relative alignment as the pads move.
 3. Dog visit detection and the state machine.
-4. New-region detection, brown filtering, persistence checks, and occlusion handling.
+4. New dark-region detection, persistence checks, and occlusion handling.
 5. Emergency Pushover notification, local deterrent playback on detection and later approaches, manual clean reset, saved evidence, logs, and documented configuration.
 6. Replay a small set of recorded clips through the same analysis functions as the live camera and tune exposed thresholds. Do not train a model.
 
 ## Acceptance checks
 
 - With the dog absent, shifting either pad within the marked search region does not itself send a notification; blue and pink identities remain correct.
-- A visit followed by a new visible brown object on either pad sends one notification and plays the local deterrent. This can occur while the dog is still in the area if the object is visible.
+- A visit followed by a new visible dark object, including a black one, on either pad sends one notification and plays the local deterrent. This can occur while the dog is still in the area if the object is visible.
 - A visit that only wets a pad does not send a notification in the test clips.
 - When the dog obscures the object, the display says the result is pending; a notification is sent after the object becomes visible and passes the persistence check.
-- A brief shadow, exposure shift, or transient brown region does not send a notification in the test clips.
+- A brief shadow, exposure shift, or transient dark region does not send a notification in the test clips.
 - The same object does not produce another detection notification. Pushover handles emergency retries, and a dog approach plays the deterrent again. Cleanup and `Set clean baseline` rearm detection.
 - The app handles a missing camera, lost frames, pad localization failure, and missing baseline without crashing or making a false confirmed claim.
 

@@ -1,6 +1,6 @@
 # Puppy Pad Alarm (vibe-coded!!!!)
 
-A local camera app for two puppy pads, one blue and one pink. After a dog visit, it looks for a new brown region on either pad. A possible detection plays a short deterrent sound near the dog and sends a Pushover notification to your phone.
+A local camera app for two puppy pads, one blue and one pink. After a dog visit, it looks for a new dark region on either pad. A possible detection plays a short deterrent sound near the dog and sends a Pushover notification to your phone.
 
 The camera feed and event videos stay on your computer. Pushover receives a snapshot when an event is detected. A detection is a prompt to check the pad, not proof of poop.
 
@@ -67,6 +67,6 @@ Use `--expected pink` for a pink-pad event or `--expected none` for a clip with 
 ## If something is wrong
 
 - No phone alert: Check that `PUSHOVER_TOKEN` and `PUSHOVER_USER` are set in the terminal that starts the app. The preview and `alarm_data/events.log` show delivery errors.
-- No detection or too many alerts: Check the saved snapshot and event video. The default image thresholds are starting values and may need adjustment for your camera and lighting.
+- No detection or too many alerts: Check the saved snapshot and event video. Detection accepts dark colors, including black, and can mistake shadows or dark wet patches for poop. Adjust `max_dark_value` and the other image thresholds for your camera and lighting.
 - Restart appears to lose setup: Start the app from the project directory so it uses the same `config.yaml` and `alarm_data/` paths.
 - C270 is not found on Windows: Check that Windows lists and enables the webcam. The startup error shows the DirectShow camera names and indices found by the app.
