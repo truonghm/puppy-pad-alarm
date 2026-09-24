@@ -37,6 +37,24 @@ def test_dog_covering_object_defers_detection() -> None:
     assert candidates == []
 
 
+def test_dark_dog_is_masked_but_separate_object_is_found() -> None:
+    """A tight dog box does not turn dark fur into an alert candidate."""
+    settings = Settings()
+    region = [0, 0, 400, 250]
+    clean = np.full((250, 400, 3), 240, np.uint8)
+    changed = clean.copy()
+    cv2.rectangle(changed, (70, 60), (160, 170), (10, 10, 10), -1)
+    dog_box = (90, 80, 140, 150)
+    candidates, reason = find_candidates(changed, clean, dog_box, region, settings)
+    assert reason is None
+    assert candidates == []
+
+    cv2.rectangle(changed, (260, 100), (290, 130), (10, 10, 10), -1)
+    candidates, reason = find_candidates(changed, clean, dog_box, region, settings)
+    assert reason is None
+    assert len(candidates) == 1
+
+
 def test_example_config_loads_without_edits() -> None:
     """The copyable example uses only supported settings."""
     example = Path(__file__).resolve().parents[1] / "config.example.yaml"

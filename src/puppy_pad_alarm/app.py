@@ -26,6 +26,7 @@ from .state import AreaState, Phase
 from .vision import Candidate, crop_region, find_candidates
 
 WINDOW = "Puppy pad alarm"
+DOG_DETECTION_GRACE_S = 1.0
 
 
 def camera_source(settings: Settings) -> int | str:
@@ -131,12 +132,17 @@ class Application:
             else Path(self.settings.output_dir)
         )
         self.output.mkdir(parents=True, exist_ok=True)
-        logging.basicConfig(
-            filename=self.output / "events.log",
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)s %(message)s",
-        )
         self.logger = logging.getLogger("puppy_pad_alarm")
+        self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False
+        for handler in self.logger.handlers[:]:
+            self.logger.removeHandler(handler)
+            handler.close()
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+        for handler in (logging.FileHandler(self.output / "events.log"), logging.StreamHandler()):
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+        self.logger.info("Monitor starting; output directory: %s", self.output)
         self.recorder = (
             EventRecorder(self.output / "event_videos", self.settings, self.logger)
             if video is None and self.settings.save_event_video
@@ -147,8 +153,11 @@ class Application:
         self.baseline_region: list[int] | None = None
         self._load_references()
         self.last_dog_box: tuple[int, int, int, int] | None = None
+        self.last_dog_mask_box: tuple[int, int, int, int] | None = None
+        self.last_dog_seen_at: float | None = None
         self.last_dog_confidence = 0.0
         self.last_inference = 0.0
+        self.dog_in_area = False
         self.detector_error: str | None = None
         self.notification_status = ""
         self.event_count = 0
@@ -366,6 +375,7 @@ class Application:
         source = (
             str(self.video) if self.video is not None else camera_source(self.settings)
         )
+        self.logger.info("Opening %s: %s", "video" if self.video is not None else "camera", source)
         camera = (
             cv2.VideoCapture(source, cv2.CAP_DSHOW)
             if sys.platform == "win32" and isinstance(source, int) and self.video is None
@@ -419,9 +429,20 @@ class Application:
                         self.notification_status = f"Dog detector uncertain: {error}"
                         self.logger.error("Dog detector failed: %s", error)
                         self.last_dog_box = None
-                    dog_present = self.last_dog_box is not None and overlaps(
+                    dog_detected = self.last_dog_box is not None and overlaps(
                         self.last_dog_box, self.settings.search_region
                     )
+                    if dog_detected:
+                        self.last_dog_seen_at = now
+                        self.last_dog_mask_box = self.last_dog_box
+                    dog_present = dog_detected or (
+                        self.last_dog_seen_at is not None
+                        and now - self.last_dog_seen_at < DOG_DETECTION_GRACE_S
+                    )
+                    dog_box_for_mask = self.last_dog_box if dog_detected else self.last_dog_mask_box if dog_present else None
+                    if dog_present != self.dog_in_area:
+                        self.dog_in_area = dog_present
+                        self.logger.info("Dog %s selected area", "entered" if dog_present else "left")
                     if self.recorder is not None:
                         self.recorder.visit(
                             dog_present if self.detector_error is None else None,
@@ -441,7 +462,7 @@ class Application:
                         reason = None if current is not None else "Selected area is outside the camera image"
                         if current is not None and self.baseline is not None and state.phase != Phase.READY:
                             candidates, reason = find_candidates(
-                                current, self.baseline, self.last_dog_box,
+                                current, self.baseline, dog_box_for_mask,
                                 self.settings.search_region, self.settings,
                             )
                         old_reason = state.reason

@@ -43,7 +43,7 @@ def send_pushover(snapshot: Path | None) -> None:
             PUSHOVER_URL,
             data=data,
             files=files,
-            timeout=10,
+            timeout=httpx.Timeout(30.0),
         )
     response.raise_for_status()
     result = response.json()

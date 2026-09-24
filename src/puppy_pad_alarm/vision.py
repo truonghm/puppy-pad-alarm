@@ -44,7 +44,14 @@ def find_candidates(
     if dog_box is not None:
         x, y, _, _ = region
         x1, y1, x2, y2 = dog_box
-        cv2.rectangle(visible, (x1 - x - 8, y1 - y - 8), (x2 - x + 8, y2 - y + 8), 0, -1)
+        margin = settings.dog_mask_margin_px
+        cv2.rectangle(
+            visible,
+            (x1 - x - margin, y1 - y - margin),
+            (x2 - x + margin, y2 - y + margin),
+            0,
+            -1,
+        )
     if cv2.countNonZero(visible) < visible.size * 0.25:
         return [], "Dog hides most of the selected area"
     current_lab = cv2.cvtColor(current, cv2.COLOR_BGR2LAB).astype(np.float32)

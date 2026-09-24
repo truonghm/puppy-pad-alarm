@@ -40,6 +40,8 @@ On first use, press `C`, then press `B` while both pads are visible and clean. Y
 
 After a detection, the whole area stays in an alert state until you clean it and press `B`. Another visit will not send a new detection alert while that state is active. If the dog approaches the detected object again, the deterrent sound plays again.
 
+The app can alert while the dog is still in the area if a new dark object remains visible outside the dog's masked region. The mask includes a margin around the detected dog box. A brief missed dog detection is held for one second to avoid treating the dog as the object.
+
 The phone alert uses Pushover emergency priority. Pushover repeats it every minute for up to 5 minutes unless you acknowledge it in the Pushover app. The app does not send separate reminders. Pressing `B` clears the app's alert state, but does not acknowledge an emergency message already sent to Pushover.
 
 ## Saved files
@@ -66,7 +68,7 @@ Use `--expected none` for a clip with no poop. Replay writes results under `alar
 
 ## If something is wrong
 
-- No phone alert: Check that `PUSHOVER_TOKEN` and `PUSHOVER_USER` are set in the terminal that starts the app. The preview and `alarm_data/events.log` show delivery errors.
+- No phone alert: Check that `PUSHOVER_TOKEN` and `PUSHOVER_USER` are set in the terminal that starts the app. Events and errors appear in that terminal and in `alarm_data/events.log`. A network handshake timeout can still occur; the app allows up to 30 seconds for the request.
 - No detection or too many alerts: Check the saved snapshot and event video. Detection accepts dark colors, including black, and can mistake shadows or dark wet patches for poop. Adjust `max_dark_value` and the other image thresholds for your camera and lighting.
 - Restart appears to lose setup: Start the app from the project directory so it uses the same `config.yaml` and `alarm_data/` paths.
 - C270 is not found on Windows: Check that Windows lists and enables the webcam. The startup error shows the DirectShow camera names and indices found by the app.
