@@ -10,9 +10,8 @@ import numpy as np
 
 @dataclass(frozen=True)
 class ReviewInput:
-    """Pad-relative images to inspect when local rules are uncertain."""
+    """Selected-area images to inspect when local rules are uncertain."""
 
-    pad_color: str
     baseline: np.ndarray
     current: np.ndarray
     uncertainty_reason: str

@@ -10,14 +10,14 @@ import numpy as np
 
 from puppy_pad_alarm.app import Application
 from puppy_pad_alarm.config import Settings, save_settings
-from puppy_pad_alarm.state import PadState, Phase
+from puppy_pad_alarm.state import AreaState, Phase
 from puppy_pad_alarm.vision import Candidate
 
 
 def test_hidden_object_waits_and_latches_once() -> None:
     """A hidden pad cannot confirm poop, and a later visit cannot alert again."""
     settings = Settings()
-    state = PadState()
+    state = AreaState()
     state.baseline_set()
     candidate = Candidate((100.0, 100.0), np.array([[[100, 100]]], np.int32), 80)
     assert (
@@ -82,7 +82,7 @@ def test_hidden_object_waits_and_latches_once() -> None:
 def test_occlusion_resets_partial_detection() -> None:
     """A hidden interval cannot complete a partial detection."""
     settings = Settings()
-    state = PadState()
+    state = AreaState()
     state.baseline_set()
     candidate = Candidate((100.0, 100.0), np.array([[[100, 100]]], np.int32), 80)
     state.update(
@@ -146,7 +146,7 @@ def test_occlusion_resets_partial_detection() -> None:
 
 def test_manual_clean_rearms_latched_pad() -> None:
     """The pad stays latched until the user marks it clean."""
-    state = PadState(phase=Phase.ALARM_LATCHED, detected_at=1_000.0)
+    state = AreaState(phase=Phase.ALARM_LATCHED, detected_at=1_000.0)
     assert state.phase == Phase.ALARM_LATCHED
     state.baseline_set()
     assert state.phase == Phase.READY
@@ -157,23 +157,18 @@ def test_restart_keeps_unclean_pad_latched(tmp_path: Path) -> None:
     """Restarting does not clear an alert."""
     settings_path = tmp_path / "config.yaml"
     save_settings(
-        settings_path, Settings(output_dir=str(tmp_path), save_event_video=False)
+        settings_path, Settings(output_dir=str(tmp_path), search_region=[0, 0, 320, 240], save_event_video=False)
     )
     baseline = np.full((240, 320, 3), 230, np.uint8)
-    assert cv2.imwrite(str(tmp_path / "baseline_blue.png"), baseline)
+    assert cv2.imwrite(str(tmp_path / "baseline_region.png"), baseline)
     (tmp_path / "state.json").write_text(
         json.dumps(
-            {
-                "blue": {
-                    "phase": "ALARM_LATCHED",
-                    "detected_at": 1_000.0,
-                }
-            }
+            {"region": [0, 0, 320, 240], "baseline_region": [0, 0, 320, 240], "phase": "ALARM_LATCHED", "detected_at": 1_000.0}
         )
     )
 
     restarted = Application(settings_path)
-    restored = restarted.states["blue"]
+    restored = restarted.state
     assert restored.phase == Phase.ALARM_LATCHED
     assert restored.detected_at == 1_000.0
     restarted.delivery.shutdown(wait=True)

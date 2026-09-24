@@ -12,7 +12,7 @@ import pygame
 PUSHOVER_URL = "https://api.pushover.net/1/messages.json"
 
 
-def send_pushover(pad_color: str, snapshot: Path | None) -> None:
+def send_pushover(snapshot: Path | None) -> None:
     """Send an emergency event message with available image evidence.
 
     Raises:
@@ -29,7 +29,7 @@ def send_pushover(pad_color: str, snapshot: Path | None) -> None:
         "token": token,
         "user": user,
         "title": "Puppy pad check",
-        "message": f"Possible poop detected on the {pad_color} pad.",
+        "message": "Possible poop detected in the selected pad area.",
         "priority": "2",
         "retry": "60",
         "expire": "300",

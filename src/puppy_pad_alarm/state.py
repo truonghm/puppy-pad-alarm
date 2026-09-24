@@ -20,8 +20,8 @@ class Phase(StrEnum):
 
 
 @dataclass
-class PadState:
-    """Track one pad independently of its image position."""
+class AreaState:
+    """Track the selected area's dog visits and latched event."""
 
     phase: Phase = Phase.NEEDS_BASELINE
     candidate: Candidate | None = None
@@ -75,10 +75,10 @@ class PadState:
             self.checking_since = now
             self.inspected_frames = 0
         if self.phase == Phase.READY:
-            self.reason = reason or ("Pad is hidden" if not visible else "")
+            self.reason = reason or ("Selected area is unavailable" if not visible else "")
             return None
         if not visible or reason:
-            self.reason = reason or "Pad is hidden; result pending"
+            self.reason = reason or "Selected area is unavailable; result pending"
             self.candidate = None
             self.seen_frames = 0
             return None

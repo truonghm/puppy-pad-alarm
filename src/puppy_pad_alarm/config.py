@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import yaml
@@ -19,19 +19,6 @@ class Settings:
     model: str = "yolo11n.pt"
     inference_interval_s: float = 0.2
     dog_confidence: float = 0.35
-    border_hsv: dict[str, list[list[int]]] = field(
-        default_factory=lambda: {
-            "blue": [[90, 55, 45], [135, 255, 255]],
-            "pink": [[140, 40, 45], [179, 255, 255]],
-        }
-    )
-    min_pad_area: int = 4000
-    max_pad_area_fraction: float = 0.45
-    min_border_pixels: int = 80
-    white_value_min: int = 170
-    white_saturation_max: int = 80
-    min_white_fraction: float = 0.45
-    border_exclusion_px: int = 9
     min_object_area: int = 20
     max_object_area: int = 30000
     min_delta_lab: float = 19.0
@@ -43,7 +30,6 @@ class Settings:
     checking_timeout_s: float = 8.0
     clear_frames: int = 3
     dog_proximity_margin_px: int = 40
-    pad_position_max_age_s: float = 10.0
     deterrent_cooldown_s: float = 3.0
     dog_away_confirm_s: float = 1.0
     save_debug_video: bool = False
@@ -62,17 +48,6 @@ def load_settings(path: Path) -> Settings:
     data = yaml.safe_load(path.read_text()) or {}
     if not isinstance(data, dict):
         raise TypeError(f"Expected a mapping in {path}")
-    old_color_filter = "brown_hsv_low" in data or "brown_hsv_high" in data
-    if old_color_filter:
-        data.pop("brown_hsv_low", None)
-        data.pop("brown_hsv_high", None)
-        for key, old, new in (
-            ("min_object_area", 45, 20),
-            ("max_object_area", 10000, 30000),
-            ("max_changed_fraction", 0.45, 0.65),
-        ):
-            if data.get(key) == old:
-                data[key] = new
     unknown = set(data) - set(Settings.__dataclass_fields__)
     if unknown:
         raise ValueError(f"Unknown settings: {', '.join(sorted(unknown))}")

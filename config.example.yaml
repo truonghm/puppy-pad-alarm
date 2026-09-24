@@ -5,16 +5,6 @@ output_dir: alarm_data
 model: yolo11n.pt
 inference_interval_s: 0.2
 dog_confidence: 0.35
-border_hsv:
-  blue: [[90, 55, 45], [135, 255, 255]]
-  pink: [[140, 40, 45], [179, 255, 255]]
-min_pad_area: 4000
-max_pad_area_fraction: 0.45
-min_border_pixels: 80
-white_value_min: 170
-white_saturation_max: 80
-min_white_fraction: 0.45
-border_exclusion_px: 9
 min_object_area: 20
 max_object_area: 30000
 min_delta_lab: 19.0
@@ -26,7 +16,6 @@ stable_distance_px: 25.0
 checking_timeout_s: 8.0
 clear_frames: 3
 dog_proximity_margin_px: 40
-pad_position_max_age_s: 10.0
 deterrent_cooldown_s: 3.0
 dog_away_confirm_s: 1.0
 save_debug_video: false

@@ -118,7 +118,6 @@ class EventRecorder:
 
     def mark_detection(
         self,
-        color: str,
         now: float,
         wall_time: float,
         snapshot: Path | None,
@@ -135,7 +134,6 @@ class EventRecorder:
         assert isinstance(detections, list)
         detections.append(
             {
-                "pad": color,
                 "at_utc": self._utc(wall_time),
                 "snapshot": snapshot.name if snapshot else None,
             }

@@ -25,7 +25,7 @@ def test_visit_video_has_pre_roll_and_post_roll(tmp_path: Path) -> None:
         event_video_fps=1.0, event_video_pre_roll_s=2.0, event_video_post_roll_s=2.0
     )
     recorder = EventRecorder(tmp_path, settings, logging.getLogger("test_recording"))
-    states = {"blue": "READY", "pink": "READY"}
+    states = {"region": "READY"}
     for second in range(8):
         recorder.observe(frame(second * 25), float(second))
         recorder.visit(
@@ -37,7 +37,7 @@ def test_visit_video_has_pre_roll_and_post_roll(tmp_path: Path) -> None:
         )
         if second == 4:
             recorder.mark_detection(
-                "blue", 4.0, 1_004.0, tmp_path / "event.jpg", states
+                4.0, 1_004.0, tmp_path / "event.jpg", states
             )
     clips = list(tmp_path.glob("visit_*.mp4"))
     assert len(clips) == 1
@@ -56,7 +56,7 @@ def test_visit_video_has_pre_roll_and_post_roll(tmp_path: Path) -> None:
     metadata = json.loads(clips[0].with_suffix(".json").read_text())
     assert metadata["dog_visit_count"] == 1
     assert metadata["max_dog_confidence"] == 0.8
-    assert metadata["detections"][0]["pad"] == "blue"
+    assert metadata["detections"][0]["snapshot"] == "event.jpg"
     assert metadata["detections"][0]["snapshot"] == "event.jpg"
     assert metadata["true_label"] is None
 
@@ -67,7 +67,7 @@ def test_return_during_tail_extends_one_clip(tmp_path: Path) -> None:
         event_video_fps=1.0, event_video_pre_roll_s=1.0, event_video_post_roll_s=2.0
     )
     recorder = EventRecorder(tmp_path, settings, logging.getLogger("test_recording"))
-    states = {"blue": "READY", "pink": "READY"}
+    states = {"region": "READY"}
     for second in range(8):
         recorder.observe(frame(second * 20), float(second))
         recorder.visit(second in (2, 4), float(second), 1_000.0 + second, 0.7, states)
