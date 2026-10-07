@@ -10,7 +10,5 @@ curl --silent --show-error --fail-with-body \
   --data-urlencode "user=$PUSHOVER_USER" \
   --data-urlencode 'title=Puppy pad connection test' \
   --data-urlencode 'message=Testing Pushover from Git Bash' \
-  --data-urlencode 'priority=2' \
-  --data-urlencode 'retry=60' \
-  --data-urlencode 'expire=300' \
+  --data-urlencode 'priority=0' \
   https://api.pushover.net/1/messages.json

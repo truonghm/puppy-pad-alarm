@@ -29,10 +29,7 @@ class Settings:
     stable_distance_px: float = 25.0
     checking_timeout_s: float = 8.0
     clear_frames: int = 3
-    dog_proximity_margin_px: int = 40
     dog_mask_margin_px: int = 35
-    deterrent_cooldown_s: float = 3.0
-    dog_away_confirm_s: float = 1.0
     save_debug_video: bool = False
     save_event_video: bool = True
     event_video_pre_roll_s: float = 10.0

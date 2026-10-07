@@ -15,18 +15,23 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import pygame
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 
 from .config import Settings, load_settings, save_settings
-from .notify import Deterrent, send_pushover
+from .notify import send_pushover
 from .recording import EventRecorder
 from .state import AreaState, Phase
 from .vision import Candidate, crop_region, find_candidates
 
 WINDOW = "Puppy pad alarm"
 DOG_DETECTION_GRACE_S = 1.0
+NOTIFICATION_COOLDOWN_S = 10 * 60
+
+
+def notification_due(last_alert_at: float | None, now: float) -> bool:
+    """Allow the next visit to notify after ten minutes have passed."""
+    return last_alert_at is None or now - last_alert_at >= NOTIFICATION_COOLDOWN_S
 
 
 def camera_source(settings: Settings) -> int | str:
@@ -161,14 +166,10 @@ class Application:
         self.detector_error: str | None = None
         self.notification_status = ""
         self.event_count = 0
-        self.deterrent = Deterrent(
-            Path(__file__).resolve().parents[2]
-            / "assets/freesound_community-hey-42237.mp3"
-        )
         self.delivery = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pushover")
 
     def _load_references(self) -> None:
-        """Restore the selected-area reference and its latched event."""
+        """Restore the selected-area reference and last notification time."""
         state_path = self.output / "state.json"
         saved = json.loads(state_path.read_text()) if state_path.exists() else {}
         image_path = self.output / "baseline_region.png"
@@ -184,16 +185,15 @@ class Application:
         self.baseline = image
         self.baseline_region = self.settings.search_region.copy()
         self.state.baseline_set()
+        if saved.get("detected_at") is not None:
+            self.state.detected_at = float(saved["detected_at"])
+        self.state.snapshot_name = saved.get("snapshot_name")
         if saved.get("phase") == Phase.ALARM_LATCHED:
             self.state.phase = Phase.ALARM_LATCHED
-            self.state.reason = "Event latched; clean area and press B"
-            self.state.detected_at = float(saved.get("detected_at") or time.time())
-            self.state.snapshot_name = saved.get("snapshot_name")
-            center = saved.get("object_center")
-            self.state.object_center = tuple(center) if center is not None else None
+            self.state.reason = "Match recorded; waiting for dog to leave"
 
     def _save_state(self) -> None:
-        """Persist latched state before external delivery."""
+        """Persist the visit state and last notification time."""
         path = self.output / "state.json"
         temporary = self.output / "state.tmp"
         temporary.write_text(
@@ -204,7 +204,6 @@ class Application:
                     "phase": self.state.phase.value,
                     "detected_at": self.state.detected_at,
                     "snapshot_name": self.state.snapshot_name,
-                    "object_center": self.state.object_center,
                 }
             )
         )
@@ -213,47 +212,6 @@ class Application:
     def _state_names(self) -> dict[str, str]:
         """Describe the selected area's state for video metadata."""
         return {"region": self.state.phase.value}
-
-    def _dog_near_object(self) -> bool:
-        """Test whether the dog approaches the saved event position."""
-        if self.last_dog_box is None or self.settings.search_region is None:
-            return False
-        margin = self.settings.dog_proximity_margin_px
-        center = self.state.object_center
-        if center is not None:
-            x, y, _, _ = self.settings.search_region
-            point_x, point_y = center[0] + x, center[1] + y
-            dog_x1, dog_y1, dog_x2, dog_y2 = self.last_dog_box
-            nearest_x = min(max(point_x, dog_x1), dog_x2)
-            nearest_y = min(max(point_y, dog_y1), dog_y2)
-            return (point_x - nearest_x) ** 2 + (point_y - nearest_y) ** 2 <= margin**2
-        x, y, width, height = self.settings.search_region
-        return overlaps(
-            self.last_dog_box,
-            [x - margin, y - margin, width + 2 * margin, height + 2 * margin],
-        )
-
-    def _handle_dog_approach(self, now: float, wall_time: float) -> None:
-        """Play once when the dog returns near a latched object."""
-        state = self.state
-        if state.phase != Phase.ALARM_LATCHED:
-            return
-        if not self._dog_near_object():
-            if state.dog_away_since is None:
-                state.dog_away_since = wall_time
-            if wall_time - state.dog_away_since >= self.settings.dog_away_confirm_s:
-                state.dog_near = False
-            return
-        state.dog_away_since = None
-        approaching = not state.dog_near and wall_time - state.last_deterrent_at >= self.settings.deterrent_cooldown_s
-        state.dog_near = True
-        if approaching and self.video is None:
-            state.last_deterrent_at = wall_time
-            try:
-                self.deterrent.play()
-                self.logger.info("Dog approached latched object; deterrent played")
-            except (OSError, RuntimeError, pygame.error) as error:
-                self.logger.error("Deterrent playback failed: %s", error)
 
     def _detect_dog(self, model: YOLO, frame: np.ndarray, now: float) -> None:
         """Run the off-the-shelf detector at the configured interval."""
@@ -310,7 +268,7 @@ class Application:
         self.logger.info("Clean baseline saved for selected area")
 
     def _event(self, candidate: Candidate, frame: np.ndarray) -> None:
-        """Save evidence, play deterrent, and send one phone notification."""
+        """Save evidence and send one phone notification."""
         self.event_count += 1
         stamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         snapshot = self.output / f"{stamp}_event.jpg"
@@ -332,9 +290,6 @@ class Application:
         state = self.state
         state.detected_at = time.time()
         state.snapshot_name = saved_snapshot.name if saved_snapshot else None
-        state.object_center = candidate.center
-        state.last_deterrent_at = state.detected_at
-        state.dog_near = self._dog_near_object()
         self._save_state()
         self.logger.warning(
             "Possible poop in selected area; visit dog confidence %.3f; snapshot %s",
@@ -351,11 +306,6 @@ class Application:
         if self.video is not None:
             self.notification_status = "Replay event in selected area"
             return
-        try:
-            self.deterrent.play()
-        except (OSError, RuntimeError, pygame.error) as error:
-            self.logger.error("Deterrent playback failed: %s", error)
-            self.notification_status = f"Sound failed: {error}"
         self.notification_status = "Sending Pushover"
         self.delivery.submit(send_pushover, saved_snapshot).add_done_callback(self._delivery_finished)
 
@@ -466,6 +416,7 @@ class Application:
                                 self.settings.search_region, self.settings,
                             )
                         old_reason = state.reason
+                        previous_phase = state.phase
                         confirmed = state.update(
                             dog_present=dog_present,
                             visible=current is not None,
@@ -477,8 +428,13 @@ class Application:
                         if state.reason and state.reason != old_reason:
                             self.logger.info("Selected area: %s", state.reason)
                         if confirmed is not None:
-                            self._event(confirmed, frame)
-                    self._handle_dog_approach(now, time.time())
+                            if notification_due(state.detected_at, time.time()):
+                                self._event(confirmed, frame)
+                            else:
+                                state.reason = "Match skipped during notification cooldown"
+                                self.logger.info(state.reason)
+                        elif previous_phase == Phase.ALARM_LATCHED and state.phase == Phase.READY:
+                            self._save_state()
                     preview = self._draw(frame)
                     if writer is not None:
                         writer.write(preview)
@@ -511,7 +467,6 @@ class Application:
             if writer is not None:
                 writer.release()
             cv2.destroyAllWindows()
-            self.deterrent.stop()
             self.delivery.shutdown(wait=True)
             if self.video is not None:
                 print(f"Replay detections: {self.event_count}")
@@ -562,8 +517,13 @@ class Application:
             x, y, _, _ = self.settings.search_region
             contour = candidate.contour + np.array([[[x, y]]], np.int32)
             cv2.drawContours(image, [contour], -1, (0, 255, 255), 2)
-        lines = ["C calibrate | B clean baseline / clear event | Q quit"]
-        lines.append(f"Area: {self.state.phase.value} {self.state.reason}")
+        lines = ["C calibrate | B save clean baseline | Q quit"]
+        area_status = (
+            "MATCH RECORDED"
+            if self.state.phase == Phase.ALARM_LATCHED
+            else self.state.phase.value
+        )
+        lines.append(f"Area: {area_status} {self.state.reason}")
         if self.notification_status:
             lines.append(self.notification_status[:100])
         for index, line in enumerate(lines):

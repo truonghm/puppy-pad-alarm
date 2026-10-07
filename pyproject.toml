@@ -12,7 +12,6 @@ dependencies = [
     "httpx>=0.28.1",
     "numpy>=2.5.3",
     "opencv-python>=5.0.0.93",
-    "pygame>=2.6.1",
     "pygrabber>=0.2 ; sys_platform == 'win32'",
     "pyyaml>=6.0.3",
     "ultralytics>=8.4.161",

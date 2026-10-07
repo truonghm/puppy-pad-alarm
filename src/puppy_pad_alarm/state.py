@@ -21,7 +21,7 @@ class Phase(StrEnum):
 
 @dataclass
 class AreaState:
-    """Track the selected area's dog visits and latched event."""
+    """Track dog visits and one confirmed match per visit."""
 
     phase: Phase = Phase.NEEDS_BASELINE
     candidate: Candidate | None = None
@@ -32,10 +32,6 @@ class AreaState:
     visit_confidence: float = 0.0
     detected_at: float | None = None
     snapshot_name: str | None = None
-    object_center: tuple[float, float] | None = None
-    dog_near: bool = False
-    dog_away_since: float | None = None
-    last_deterrent_at: float = 0.0
     reason: str = "No clean baseline"
 
     def baseline_set(self) -> None:
@@ -48,10 +44,6 @@ class AreaState:
         self.visit_confidence = 0.0
         self.detected_at = None
         self.snapshot_name = None
-        self.object_center = None
-        self.dog_near = False
-        self.dog_away_since = None
-        self.last_deterrent_at = 0.0
         self.reason = ""
 
     def update(
@@ -65,7 +57,15 @@ class AreaState:
         settings: Settings,
     ) -> Candidate | None:
         """Advance the visit and persistence rules; return a new confirmed region."""
-        if self.phase in (Phase.NEEDS_BASELINE, Phase.ALARM_LATCHED):
+        if self.phase == Phase.NEEDS_BASELINE:
+            return None
+        if self.phase == Phase.ALARM_LATCHED:
+            if not dog_present:
+                self.phase = Phase.READY
+                self.candidate = None
+                self.seen_frames = 0
+                self.visit_confidence = 0.0
+                self.reason = ""
             return None
         if dog_present:
             self.phase = Phase.VISIT_ACTIVE

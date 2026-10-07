@@ -1,6 +1,6 @@
 # Puppy Pad Alarm (vibe-coded!!!!)
 
-A local camera app for two puppy pads placed side by side. After a dog enters the selected area, it looks for a new dark object anywhere in that area. A possible detection plays a short deterrent sound near the dog and sends a Pushover notification to your phone.
+A local camera app for two puppy pads placed side by side. After a dog enters the selected area, it looks for a new dark object anywhere in that area. A possible detection sends a normal-priority Pushover notification with a snapshot to your phone.
 
 The camera feed and event videos stay on your computer. Pushover receives a snapshot when an event is detected. A detection is a prompt to check the pad, not proof of poop.
 
@@ -33,32 +33,34 @@ The first run downloads the YOLO dog detector model. On Windows, the app selects
 | Key | Action |
 | --- | --- |
 | `C` | Drag a rectangle around both pads, then press `Enter` or `Space` to save it. |
-| `B` | Save one clean reference image for the whole area. After cleanup, this also clears an active alert. |
+| `B` | Save a clean reference image for the whole area. |
 | `Q` | Quit. |
 
 On first use, press `C`, then press `B` while both pads are visible and clean. You do not need to repeat this on a normal restart. If you change the selected area with `C`, press `B` again to save a new clean baseline.
 
-After a detection, the whole area stays in an alert state until you clean it and press `B`. Another visit will not send a new detection alert while that state is active. If the dog approaches the detected object again, the deterrent sound plays again.
+The app sends at most one notification per dog visit. It automatically becomes ready for another visit after the dog leaves. Notifications must be at least 10 minutes apart. You can ignore a false positive without pressing a key. An object left on the pad can trigger another notification on a later visit after the cooldown. Press `B` only when you need a new clean baseline, such as after moving the pads or camera.
 
 The app can alert while the dog is still in the area if a new dark object remains visible outside the dog's masked region. The mask includes a margin around the detected dog box. A brief missed dog detection is held for one second to avoid treating the dog as the object.
 
-The phone alert uses Pushover emergency priority. Pushover repeats it every minute for up to 5 minutes unless you acknowledge it in the Pushover app. The app does not send separate reminders. Pressing `B` clears the app's alert state, but does not acknowledge an emergency message already sent to Pushover.
+The phone alert uses Pushover normal priority. It does not repeat or require acknowledgment. The app does not send separate reminders.
 
 ## Saved files
 
 | Location | Contents |
 | --- | --- |
 | `config.yaml` | Saved camera search area and settings. |
-| `alarm_data/` | Clean reference images, snapshots, alert state, and `events.log`. |
+| `alarm_data/` | Clean reference images, snapshots, last notification time, and `events.log`. |
 | `alarm_data/event_videos/` | Local videos of detected dog visits and matching JSON metadata. |
 
 Visit videos include up to 10 seconds before the visit and 20 seconds after the dog leaves. The app keeps them for up to 7 days or 5 GB, whichever limit comes first. A visit missed by the dog detector will not produce a clip.
 
 Copy [config.example.yaml](config.example.yaml) to `config.yaml` before starting. It is ready to use with the C270; `search_region: null` is filled when you press `C`. You can then edit thresholds or recording limits if needed. Set `save_event_video: false` to turn off visit recording. Leave `save_debug_video: false` for normal use; debug video records the full run without a storage limit.
 
+If you already have a `config.yaml`, remove `dog_proximity_margin_px`, `deterrent_cooldown_s`, and `dog_away_confirm_s`. These sound-only settings are no longer used.
+
 ## Check recordings later
 
-You can replay a clip without sending notifications or playing the sound:
+You can replay a clip without sending notifications:
 
 ```sh
 uv run python -m puppy_pad_alarm.app --video clip.mp4 --expected poop

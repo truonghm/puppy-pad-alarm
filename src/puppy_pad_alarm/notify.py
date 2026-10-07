@@ -1,4 +1,4 @@
-"""Phone notification and local dog deterrent playback."""
+"""Phone notifications for possible detections."""
 
 from __future__ import annotations
 
@@ -9,13 +9,12 @@ from contextlib import ExitStack
 from pathlib import Path
 
 import httpx
-import pygame
 
 PUSHOVER_URL = "https://api.pushover.net/1/messages.json"
 
 
 def send_pushover(snapshot: Path | None) -> None:
-    """Send an emergency event message with available image evidence.
+    """Send a normal-priority event message with available image evidence.
 
     Raises:
         RuntimeError: Required credentials are missing or Pushover rejects the message.
@@ -32,9 +31,7 @@ def send_pushover(snapshot: Path | None) -> None:
         "user": user,
         "title": "Puppy pad check",
         "message": "Possible poop detected in the selected pad area.",
-        "priority": "2",
-        "retry": "60",
-        "expire": "300",
+        "priority": "0",
     }
     def post_once() -> httpx.Response:
         """Open the optional snapshot separately for each send attempt."""
@@ -64,24 +61,3 @@ def send_pushover(snapshot: Path | None) -> None:
         raise RuntimeError(
             f"Pushover rejected the message: {result.get('errors', result)}"
         )
-
-
-class Deterrent:
-    """Play the supplied sound once for each detected event."""
-
-    def __init__(self, sound: Path) -> None:
-        self.sound = sound
-        self.ready = False
-
-    def play(self) -> None:
-        """Start local playback."""
-        if not self.ready:
-            pygame.mixer.init()
-            self.ready = True
-        pygame.mixer.music.load(str(self.sound))
-        pygame.mixer.music.play()
-
-    def stop(self) -> None:
-        """Release local playback when the application exits."""
-        if self.ready:
-            pygame.mixer.music.stop()

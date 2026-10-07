@@ -15,10 +15,7 @@ min_persistence_s: 0.5
 stable_distance_px: 25.0
 checking_timeout_s: 8.0
 clear_frames: 3
-dog_proximity_margin_px: 40
 dog_mask_margin_px: 35
-deterrent_cooldown_s: 3.0
-dog_away_confirm_s: 1.0
 save_debug_video: false
 save_event_video: true
 event_video_pre_roll_s: 10.0
